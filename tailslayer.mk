@@ -41,6 +41,10 @@ tailslayer-extreme:
 		--trefi-us $(TAILSLAYER_TREFI_US) \
 		--thresh-mult $(TAILSLAYER_THRESH_MULT)
 
+## tailslayer-esp32-sim: Run cycle-accurate ESP32-S3 PSRAM hedged read sim
+tailslayer-esp32-sim:
+	@$(PYTHON) $(TAILSLAYER_DIR)/esp32/esp32_tailslayer_sim.py
+
 ## tailslayer-clean-extreme: Clean extreme build artifacts
 tailslayer-clean-extreme:
 	@rm -rf $(TAILSLAYER_BUILD_DIR)
