@@ -59,22 +59,37 @@ tailslayer::HedgedReader<T, my_signal, my_work<T>,
 
 You can also optionally pass in a different channel offset, channel bit, and number of replicas to the constructor. *Note:* Each insert copies the element N times where N is the number of replicas. It does the address calculation work on the backend, allowing tailslayer to act as a hedged vector that uses logical indices. Additionally, each replica is pinned to a separate core, and will spin on that core according to the signal function until the read happens.
 
-## Build the example
+## Extreme Strictness Verification & Artifact Retention
+
+Tailslayer includes an extreme compilation mode (`tailslayer_extreme.c`) enforcing zero-tolerance compiler flags (`-Wall -Wextra -Werror -Wpedantic -Wconversion -Wshadow -Wcast-align -Wpointer-arith -Wwrite-strings -O3 -fno-omit-frame-pointer -fverbose-asm -save-temps=obj`).
+
+All compilation intermediates (`.s`, `.i`, `.o`), disassembly (`objdump -d`), symbols (`nm -C`), ELF sections (`readelf -S`), CPU info (`lscpu`), memory info (`/proc/meminfo`), raw spikes (`raw_spikes.csv`), and JSON telemetry (`telemetry.json`) are preserved.
 
 ```bash
-make
-./tailslayer_example
+make tailslayer-extreme
 ```
 
-## Benchmarks and spike timing
+## ESP32-S3 Embedded Dual-Core Probe
 
-The `discovery/` directory contains supporting code used to characterize DRAM refresh behavior:
+The `esp32/` directory provides hardware-ready firmware for Xtensa LX7 dual-core microcontrollers:
 
-- `discovery/benchmark/`: Channel-hedged read benchmark
-- `discovery/trefi_probe.c`: Spike timing probe for measuring the refresh cycle
+- `esp32/esp32_tailslayer_probe.ino`: Arduino/ESP-IDF dual-core firmware issuing hedged reads across internal SRAM and Octal SPI PSRAM (APMemory APS6408).
+- `esp32/esp32_tailslayer_sim.py`: Cycle-accurate hardware simulator modeling tREFI refresh bursts and tail-latency reduction.
 
 ```bash
-cd discovery/benchmark
-make
-sudo chrt -f 99 ./hedged_read_cpp --all --channel-bit 8
+make tailslayer-esp32-sim
 ```
+
+## Rust Implementation (`tailslayer-rs`)
+
+A pure, memory-safe Rust port of Tailslayer is located in [`rust/`](rust/):
+
+- `allocator.rs`: Dual-channel memory allocator with 2MB Hugepages (`MAP_HUGETLB`) and `mlock` page pinning.
+- `arch.rs`: Architecture-specific cycle counters (`_rdtsc` on x86_64, `cntvct_el0` on aarch64) and cache flush (`clflush` / `dc civac`).
+- `probe.rs`: DRAM refresh jitter spike detector and percentiles ledger.
+
+```bash
+make tailslayer-rust-build
+make tailslayer-rust-probe
+```
+
