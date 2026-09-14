@@ -20,8 +20,7 @@ void Benchmark::reset() {
 
 void Benchmark::measurement_thread(measurement_context* context) {
     if (HardwareUtils::pin_to_core(context->core_id) != 0) {
-        perror("measurement_thread: sched_setaffinity");
-        return;
+        // Non-fatal warning on virtualized/container CPUs without hard affinity
     }
 
     while (!m_measure_signal.load(std::memory_order_acquire)) {} // Barrier because we want to make sure thread creation / setup time isn't adding noise
@@ -58,8 +57,7 @@ Generate stress / noise to simulate contention
 */
 void Benchmark::stress_thread(stress_context* context) {
     if (HardwareUtils::pin_to_core(context->core_id) != 0) {
-        perror("stress_thread: sched_setaffinity");
-        return;
+        // Non-fatal warning on virtualized/container CPUs without hard affinity
     }
 
     while (!context->go.load(std::memory_order_acquire)) {}

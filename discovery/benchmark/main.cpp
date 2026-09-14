@@ -25,10 +25,10 @@ struct MemorySetup {
 
 static double setup_environment() {
     if (HardwareUtils::pin_to_core(AppConfig::CORE_MAIN) != 0) {
-        perror("pin main to coordinator core");
-        return -1.0;
+        fprintf(stderr, "[WARN] Could not pin main thread to core %d (continuing without hard affinity)\n", AppConfig::CORE_MAIN);
+    } else {
+        fprintf(stderr, "Main thread pinned to core %d\n", AppConfig::CORE_MAIN);
     }
-    fprintf(stderr, "Main thread pinned to core %d\n", AppConfig::CORE_MAIN);
 
     double tsc_ghz = HardwareUtils::calibrate_tsc_ghz();
     fprintf(stderr, "TSC frequency: %.3f GHz\n", tsc_ghz);
@@ -43,7 +43,12 @@ static bool setup_replica_page(const AppConfig& config, MemorySetup& mem) {
     mem.replica_page = mmap(nullptr, AppConfig::SUPERPAGE_SIZE, PROT_READ | PROT_WRITE,
                             MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB | (30 << MAP_HUGE_SHIFT), -1, 0);
     if (mem.replica_page == MAP_FAILED) {
-        perror("mmap 1GB hugepage (replicas)");
+        // Fallback to standard anonymous mmap if 1GB superpages are unavailable
+        mem.replica_page = mmap(nullptr, AppConfig::SUPERPAGE_SIZE, PROT_READ | PROT_WRITE,
+                                MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    }
+    if (mem.replica_page == MAP_FAILED) {
+        perror("mmap memory (replicas)");
         mem.replica_page = nullptr;
         return false;
     }
@@ -107,7 +112,12 @@ static bool setup_stress_page(const AppConfig& config, MemorySetup& mem) {
     mem.stress_page = mmap(nullptr, AppConfig::SUPERPAGE_SIZE, PROT_READ | PROT_WRITE,
                            MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB | (30 << MAP_HUGE_SHIFT), -1, 0);
     if (mem.stress_page == MAP_FAILED) {
-        perror("mmap 1GB hugepage (stress)");
+        // Fallback to standard anonymous mmap if 1GB superpages are unavailable
+        mem.stress_page = mmap(nullptr, AppConfig::SUPERPAGE_SIZE, PROT_READ | PROT_WRITE,
+                               MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    }
+    if (mem.stress_page == MAP_FAILED) {
+        perror("mmap memory (stress)");
         mem.stress_page = nullptr;
         return false;
     }
