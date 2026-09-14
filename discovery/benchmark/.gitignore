@@ -1,0 +1,8 @@
+# Path: labs/tailslayer/discovery/benchmark/.gitignore
+
+build/
+artifacts/
+*.o
+hedged_read_cpp
+
+# end of file: labs/tailslayer/discovery/benchmark/.gitignore
