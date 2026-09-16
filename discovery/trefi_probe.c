@@ -138,18 +138,24 @@ int main(int argc, char **argv)
     fprintf(stderr, "Expected tREFI: %.1f us = %.0f cycles\n",
             trefi_us, expected_trefi_cyc);
 
-    // Map 2MB hugepage
+    // Map 2MB hugepage, falling back to standard mmap if hugepages not configured
+    int is_huge = 1;
     void *p = mmap(NULL, HUGEPAGE_2M, PROT_READ | PROT_WRITE,
                    MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB |
                    (21 << MAP_HUGE_SHIFT), -1, 0);
     if (p == MAP_FAILED) {
-        perror("mmap 2MB hugepage");
-        fprintf(stderr, "Setup: sudo bash -c 'echo 64 > "
-                "/sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages'\n");
-        return 1;
+        p = mmap(NULL, HUGEPAGE_2M, PROT_READ | PROT_WRITE,
+                 MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+        if (p == MAP_FAILED) {
+            perror("mmap failed");
+            return 1;
+        }
+        is_huge = 0;
+        madvise(p, HUGEPAGE_2M, MADV_HUGEPAGE);
     }
     memset(p, 0x42, HUGEPAGE_2M);
     mlock(p, HUGEPAGE_2M);
+    fprintf(stderr, "Page Mode: %s\n", is_huge ? "HUGETLB_2MB" : "STANDARD_MMAP");
 
     volatile char *addr = (volatile char *)p;
 
